@@ -1,0 +1,1 @@
+query = input("Enter your query please:\n")
