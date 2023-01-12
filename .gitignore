@@ -337,3 +337,6 @@ $RECYCLE.BIN/
 
 # Windows shortcuts
 *.lnk
+
+### App ###
+repo/index.xlsx
