@@ -42,3 +42,12 @@ def cos_vector(vector1, vector2):
     vector1_size = vector_size(vector1)
     vector2_size = vector_size(vector2)
     return dot_result / (vector1_size * vector2_size)
+
+
+def make_vector_from_query(indexer):
+    query = input("Enter your query please:\n")
+    words = query.split()
+    vector = [0] * indexer.get_term_count()
+    for word in words:
+        vector[indexer.get_term_index_from_list(word)] += 1
+    return vector

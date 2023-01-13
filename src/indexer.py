@@ -4,6 +4,7 @@ import time
 import os
 import pandas as pd
 from PyPDF2 import PageObject
+import numpy as np
 
 
 class Indexer:
@@ -96,6 +97,20 @@ class Indexer:
             return False
         return True
 
+    def get_term_index_from_list(self, term: str):
+        df = pd.read_excel('index.xlsx', skiprows=0, usecols='A')
+        termlist = np.array(df.values.tolist()).flatten()
+        return np.where(termlist == term)[0][0]
+
+    def get_doc_count(self):
+        document_list = os.listdir('../repo')
+        # Minus 1 because of the index.xlsx file
+        return len(document_list) - 1
+
+    def get_term_count(self):
+        df = pd.read_excel('index.xlsx', skiprows=0, usecols='A')
+        termlist = np.array(df.values.tolist()).flatten()
+        return len(termlist)
 
 if __name__ == '__main__':
     indexer = Indexer()
