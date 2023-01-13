@@ -16,7 +16,7 @@ class Indexer:
         documents_list = os.listdir('../repo/')
         final_dict = self.index_all_docs(documents_list)
         self.save_to_file(final_dict)
-        print(f'######## it took {time.time() - start_time}s to finish ########')
+        print(f'######## it took {time.time() - start_time}s to index all docs ########')
 
     def index_all_docs(self, documents_list: list):
         final_dict = {}
@@ -39,10 +39,10 @@ class Indexer:
                 page_content = page.extract_text()
                 final_dict = self.index_a_page(final_dict, page_content, document)
             except TypeError:
-                print('couldn\'t index the page!')
+                print('Couldn\'t index the page!')
                 pass
             except Exception:
-                print('an unknown problem occurred during indexing!')
+                print('An unknown problem occurred during indexing!')
         return final_dict
 
     def parse_a_document(self, path_to_doc: str) -> list[PageObject]:
@@ -53,16 +53,28 @@ class Indexer:
 
     def index_a_page(self, final_dict: dict, page_content: str, document: str) -> dict:
         for word in self.get_words_from_text(page_content):
-            if word.lower() in self.stop_words:
+            word = word.lower()
+
+            if not self.should_be_indexed(word):
                 continue
 
-            if not word.lower() in final_dict.keys():  # todo : add more conditions & checks
-                final_dict[word.lower()] = [1, [document]]
+            if word not in final_dict.keys():
+                final_dict[word] = [1, 1, {}]
+                final_dict[word][2] = self.get_including_docs(document, final_dict[word][2])
             else:
-                final_dict[word.lower()][0] += 1
-                final_dict[word.lower()][1].append(document)
+                final_dict[word][0] += 1
+                final_dict[word][2] = self.get_including_docs(document, final_dict[word][2])
+                final_dict[word][1] = len(set(final_dict[word][2]))
 
         return final_dict
+
+    def get_including_docs(self, doc_name: str, including_docs: dict):
+        if including_docs.get(doc_name) is None:
+            including_docs[doc_name] = 1
+        else:
+            including_docs[doc_name] += 1
+
+        return including_docs
 
     def save_to_file(self, final_dict: dict) -> None:
         df = pd.DataFrame(data=final_dict).T
@@ -70,6 +82,19 @@ class Indexer:
 
     def get_words_from_text(self, text: str) -> list:
         return re.findall(r'\w+', text)
+
+    def should_be_indexed(self, word: str) -> bool:
+        if word in self.stop_words:
+            return False
+        if word.isdecimal():
+            return False
+        if word.isdigit():
+            return False
+        if word.isnumeric():
+            return False
+        if word.isspace():
+            return False
+        return True
 
 
 if __name__ == '__main__':
