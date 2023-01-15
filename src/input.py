@@ -1,8 +1,3 @@
-from indexer import Indexer
-import calculation
-
-
-indexer = Indexer()
-indexer.main()
-
-print(calculation.make_vector_from_query(indexer))
+def init_input():
+    query = input("Enter your query please:\t")
+    return query.strip().split()

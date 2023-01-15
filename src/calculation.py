@@ -26,8 +26,8 @@ def calculate_normal_idf_for_all(dfs, total_doc_count):
     return idfs
 
 
-def calculate_normal_tfidf(tf, df):
-    return math.log(1 + tf, 10) * calculate_normal_idf(df)
+def calculate_normal_tfidf(tf, df, total_doc_count):
+    return math.log(1 + tf, 10) * calculate_normal_idf(df, total_doc_count)
 
 
 def vector_size(vector):
@@ -44,10 +44,8 @@ def cos_vector(vector1, vector2):
     return dot_result / (vector1_size * vector2_size)
 
 
-def make_vector_from_query(indexer):
-    query = input("Enter your query please:\n")
-    words = query.strip().split()
+def make_vector_from_query(indexer, query_list):
     vector = [0] * indexer.get_term_count()
-    for word in words:
+    for word in query_list:
         vector[indexer.get_term_index_from_list(word)] += 1
     return vector
