@@ -30,7 +30,7 @@ class Indexer:
 
     def index_all_docs(self, documents_list: list):
         final_dict = {}
-        for document in documents_list[:1]:
+        for document in documents_list[:5]:
             final_dict = self.index_a_document(document, final_dict)
 
         return final_dict

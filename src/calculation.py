@@ -1,4 +1,5 @@
 import math
+import pandas as pd
 
 
 def dot_product(vector1, vector2):
@@ -49,3 +50,30 @@ def make_vector_from_query(indexer, query_list):
     for word in query_list:
         vector[indexer.get_term_index_from_list(word)] += 1
     return vector
+
+
+def extract_tf_table():
+    df = pd.read_excel('../index.xlsx', skiprows=0, usecols='A, D')
+    terms = []
+
+    for index in range(len(df.values)):
+        terms.append(df.values[index][0])
+
+    docs = set()
+    datas = []
+
+    for index2 in range(len(df.values)):
+        pair = dict(eval(df.values[index2][1]))
+        docs.update(pair.keys())
+
+    docs_list = list(docs)
+
+    for index3 in range(len(df.values)):
+        doc_tf_dict = dict(eval(df.values[index3][1]))
+        data = [0] * len(docs_list)
+        for index4 in range(len(doc_tf_dict)):
+            data[docs_list.index(list(doc_tf_dict.keys())[index4])] = list(doc_tf_dict.values())[index4]
+        datas.append(data)
+
+    new_df = pd.DataFrame(datas, index=terms, columns=docs_list)
+    new_df.to_excel('../tf_table.xlsx')
