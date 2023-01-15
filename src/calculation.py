@@ -46,7 +46,7 @@ def cos_vector(vector1, vector2):
 
 def make_vector_from_query(indexer):
     query = input("Enter your query please:\n")
-    words = query.split()
+    words = query.strip().split()
     vector = [0] * indexer.get_term_count()
     for word in words:
         vector[indexer.get_term_index_from_list(word)] += 1

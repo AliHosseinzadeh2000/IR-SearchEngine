@@ -5,26 +5,14 @@ import os
 import pandas as pd
 from PyPDF2 import PageObject
 import numpy as np
+from normaziler import Normalizer
 
 
 class Indexer:
 
     def __init__(self):
         self.stop_words = self.get_stop_words_from_file('../resources/stop_words_english.txt')
-
-    def main(self):
-        start_time = time.time()
-        documents_list = os.listdir('../repo/')
-        final_dict = self.index_all_docs(documents_list)
-        self.save_to_file(final_dict)
-        print(f'######## it took {time.time() - start_time}s to index all docs ########')
-
-    def index_all_docs(self, documents_list: list):
-        final_dict = {}
-        for document in documents_list[:3]:
-            final_dict = self.index_a_document(document, final_dict)
-
-        return final_dict
+        self.normalizer = Normalizer()
 
     @staticmethod
     def get_stop_words_from_file(filename: str) -> list:
@@ -32,6 +20,20 @@ class Indexer:
             stop_words = file.read().splitlines()
 
             return stop_words
+
+    def main(self):
+        start_time = time.time()
+        documents_list = self.get_documents_list_and_count()[0]
+        final_dict = self.index_all_docs(documents_list)
+        self.save_to_file(final_dict)
+        print(f'######## it took {time.time() - start_time}s to index all docs ########')
+
+    def index_all_docs(self, documents_list: list):
+        final_dict = {}
+        for document in documents_list[:5]:
+            final_dict = self.index_a_document(document, final_dict)
+
+        return final_dict
 
     def index_a_document(self, document: str, final_dict: dict) -> dict:
         doc_pages = self.parse_a_document(document)
@@ -59,6 +61,8 @@ class Indexer:
             if not self.should_be_indexed(word):
                 continue
 
+            word = self.normalizer.normalize_a_word(word)
+
             if word not in final_dict.keys():
                 final_dict[word] = [1, 1, {}]
                 final_dict[word][2] = self.get_including_docs(document, final_dict[word][2])
@@ -79,7 +83,7 @@ class Indexer:
 
     def save_to_file(self, final_dict: dict) -> None:
         df = pd.DataFrame(data=final_dict).T
-        df.to_excel('index.xlsx')
+        df.to_excel('../index.xlsx')
 
     def get_words_from_text(self, text: str) -> list:
         return re.findall(r'\w+', text)
@@ -97,20 +101,19 @@ class Indexer:
             return False
         return True
 
-    def get_term_index_from_list(self, term: str):
-        df = pd.read_excel('index.xlsx', skiprows=0, usecols='A')
+    def get_term_index_from_list(self, term: str):  # todo 1: specify return type  -  todo2: catch exception
+        df = pd.read_excel('../index.xlsx', skiprows=0, usecols='A')
         termlist = np.array(df.values.tolist()).flatten()
         return np.where(termlist == term)[0][0]
 
-    def get_doc_count(self):
+    def get_documents_list_and_count(self) -> tuple[list, int]:
         document_list = os.listdir('../repo')
-        # Minus 1 because of the index.xlsx file
-        return len(document_list) - 1
+        return document_list, len(document_list)
 
-    def get_term_count(self):
-        df = pd.read_excel('index.xlsx', skiprows=0, usecols='A')
-        termlist = np.array(df.values.tolist()).flatten()
-        return len(termlist)
+    def get_term_count(self) -> int:
+        df = pd.read_excel('../index.xlsx', skiprows=0, usecols='A')
+        return df.shape[0]
+
 
 if __name__ == '__main__':
     indexer = Indexer()
