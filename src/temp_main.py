@@ -31,6 +31,9 @@ def make_tables(indexer):
     calculation.extract_tf_table()
 
     print("Calculating idf...")
+    # 5 'cause current indexed document count is 5
+    calculation.extract_idf_table(5)
+
     print("Calculating tf-idf...")
 
 main()

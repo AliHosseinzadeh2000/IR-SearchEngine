@@ -77,3 +77,18 @@ def extract_tf_table():
 
     new_df = pd.DataFrame(datas, index=terms, columns=docs_list)
     new_df.to_excel('../tf_table.xlsx')
+
+
+def extract_idf_table(total_doc_count):
+    df = pd.read_excel('../index.xlsx', skiprows=0, usecols='A, C')
+    terms = []
+    for index in range(len(df.values)):
+        terms.append(df.values[index][0])
+
+    dfs = []
+
+    for index in range(len(df.values)):
+        dfs.append(df.values[index][1])
+
+    new_df = pd.DataFrame(calculate_normal_idf_for_all(dfs, total_doc_count), index=terms)
+    new_df.to_excel('../idf_table.xlsx')
