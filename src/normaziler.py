@@ -11,6 +11,9 @@ class Normalizer:
         self.wordnet_lemmatizer = WordNetLemmatizer()
         nltk.download('wordnet')
 
+    def normalize_word_list(self, word_list) -> list[str]:
+        return [self.normalize_a_word(word.lower()) for word in word_list]
+
     def normalize_a_word(self, word: str) -> str:
         word = self.remove_digits_from_word(word)
         word = self.stem_a_word(word)
@@ -32,5 +35,5 @@ class Normalizer:
             pass
         return word
 
-    def remove_digits_from_word(self, word: str):
+    def remove_digits_from_word(self, word: str) -> str:
         return re.sub(r'\d+', '', word)

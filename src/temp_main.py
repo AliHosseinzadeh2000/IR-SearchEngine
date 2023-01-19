@@ -1,39 +1,18 @@
-from indexer import Indexer
-import calculation
+from calculation import Calculation
 from normaziler import Normalizer
-import input
 
 
 def main():
     normalizer = Normalizer()
-    indexer = Indexer(normalizer)
+    calculation = Calculation()
     print("Initializing...")
-    make_tables(indexer)
+    calculation.make_tables()  # todo : move this to the 'calculation' module
 
     while True:
-        query = input.init_input()
-        query = normalize_word_list(query, normalizer)
-        query_vector = calculation.make_vector_from_query(indexer, query)
+        query = input("Enter your query please:\t").strip().split()
+        query = normalizer.normalize_word_list(query)
+        query_vector = calculation.make_vector_from_query(query)  # todo : move this to the 'calculation' module
+        # ranked_documents = calculation.get_ranked_documents(query)
 
-
-def normalize_word_list(word_list, normalizer):
-    for index in range(len(word_list)):
-        word_list[index] = normalizer.normalize_a_word(word_list[index])
-    return word_list
-
-
-def make_tables(indexer):
-    # making index table
-    print("Indexing documents...")
-    indexer.main()
-
-    print("Extracting tf table...")
-    calculation.extract_tf_table()
-
-    print("Calculating idf...")
-    # 5 'cause current indexed document count is 5
-    calculation.extract_idf_table(5)
-
-    print("Calculating tf-idf...")
 
 main()
