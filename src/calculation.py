@@ -1,5 +1,6 @@
 import math
 import pandas as pd
+import numpy as np
 
 
 def dot_product(vector1, vector2):
@@ -27,8 +28,15 @@ def calculate_normal_idf_for_all(dfs, total_doc_count):
     return idfs
 
 
-def calculate_normal_tfidf(tf, df, total_doc_count):
-    return math.log(1 + tf, 10) * calculate_normal_idf(df, total_doc_count)
+def calculate_normal_tfidf(tf, idf):
+    return float(math.log(1 + float(tf), 10)) * idf
+
+
+def calculate_normal_tfidf_for_all(tfs, idfs):
+    tfidf = []
+    for index in range(len(tfs)):
+        tfidf.append(calculate_normal_tfidf(tfs[index], idfs[index]))
+    return tfidf
 
 
 def vector_size(vector):
@@ -92,3 +100,18 @@ def extract_idf_table(total_doc_count):
 
     new_df = pd.DataFrame(calculate_normal_idf_for_all(dfs, total_doc_count), index=terms)
     new_df.to_excel('../idf_table.xlsx')
+
+
+def extract_tfidf_table():
+    df = pd.read_excel('../idf_table.xlsx', skiprows=0, usecols='B')
+    idfs = df.values.tolist()
+    flat_idfs = sum(idfs, [])
+
+    # should be repeated for every column of the excel file
+    df = pd.read_excel('../tf_table.xlsx', skiprows=0, usecols='B')
+    col = df[df.columns[0]]
+    tfs = col.tolist()
+    tfidf = calculate_normal_tfidf_for_all(tfs, flat_idfs)
+
+    new_df = pd.DataFrame(tfidf)
+    new_df.to_excel('../tfidf.xlsx')
