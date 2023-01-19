@@ -10,25 +10,25 @@ from normaziler import Normalizer
 
 class Indexer:
 
-    def __init__(self, word_normalizer):
+    def __init__(self):
         self.stop_words = self.get_stop_words_from_file('../resources/stop_words_english.txt')
-        self.normalizer = word_normalizer
+        self.normalizer = Normalizer()
 
     @staticmethod
-    def get_stop_words_from_file(filename: str) -> list:
+    def get_stop_words_from_file(filename: str) -> list[str]:
         with open(filename, 'r', encoding='utf-8') as file:
             stop_words = file.read().splitlines()
 
             return stop_words
 
-    def main(self):
+    def main(self) -> None:
         start_time = time.time()
         documents_list = self.get_documents_list_and_count()[0]
         final_dict = self.index_all_docs(documents_list)
         self.save_to_file(final_dict)
         print(f'######## it took {time.time() - start_time}s to index all docs ########')
 
-    def index_all_docs(self, documents_list: list):
+    def index_all_docs(self, documents_list: list[str]) -> dict:
         final_dict = {}
         for document in documents_list[:5]:
             final_dict = self.index_a_document(document, final_dict)
@@ -85,7 +85,7 @@ class Indexer:
         df = pd.DataFrame(data=final_dict).T
         df.to_excel('../index.xlsx')
 
-    def get_words_from_text(self, text: str) -> list:
+    def get_words_from_text(self, text: str) -> list[str]:
         return re.findall(r'\w+', text)
 
     def should_be_indexed(self, word: str) -> bool:
@@ -106,7 +106,7 @@ class Indexer:
         termlist = np.array(df.values.tolist()).flatten()
         return np.where(termlist == term)[0][0]
 
-    def get_documents_list_and_count(self) -> tuple[list, int]:
+    def get_documents_list_and_count(self) -> tuple[list[str], int]:
         document_list = os.listdir('../repo')
         return document_list, len(document_list)
 
