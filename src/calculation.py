@@ -56,10 +56,11 @@ class Calculation:
     def calculate_normal_tfidf(self, tf: int, idf: float) -> float:
         return float(math.log(1 + float(tf), 10)) * idf
 
-    def calculate_normal_tfidf_for_all(self, tfs: list[int], idfs: list[float]) -> list[float]:
+# Calculates tf-idf for a complete row (for a term in each document)
+    def calculate_normal_tfidf_for_all(self, tfs: list[int], idf: float) -> list[float]:
         tfidf = []
         for index in range(len(tfs)):
-            tfidf.append(self.calculate_normal_tfidf(tfs[index], idfs[index]))
+            tfidf.append(self.calculate_normal_tfidf(tfs[index], idf))
         return tfidf
 
     def vector_size(self, vector: list[int | float]) -> float:
@@ -128,11 +129,14 @@ class Calculation:
         idfs = df.values.tolist()
         flat_idfs = sum(idfs, [])
 
-        # should be repeated for every column of the excel file
-        df = pd.read_excel('../tf_table.xlsx', skiprows=0, usecols='B')
-        col = df[df.columns[0]]
-        tfs = col.tolist()
-        tfidf = self.calculate_normal_tfidf_for_all(tfs, flat_idfs)
+        df = pd.read_excel('../tf_table.xlsx', skiprows=0)
+        cols = df[df.columns[1:]]
+        index = 0
+        tfidf = []
+        for col in cols.values:
+            tfidf.append(self.calculate_normal_tfidf_for_all(col, flat_idfs[index]))
+            index += 1
 
+        # TODO: Put the doc names on top of the Excel file for user presentation - columns=docs_list
         new_df = pd.DataFrame(tfidf)
         new_df.to_excel('../tfidf.xlsx')
