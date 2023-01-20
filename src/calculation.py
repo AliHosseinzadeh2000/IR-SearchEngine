@@ -9,7 +9,12 @@ class Calculation:
         self.indexer = Indexer()
 
     def get_ranked_documents(self, query: list[str]):
-        pass
+        query_vector = self.make_vector_from_query(query)
+        cosines = []
+        df = pd.read_excel('../tfidf.xlsx', skiprows=0)
+        for index in range(5):
+            cosines.append(self.get_cos_vector(self.get_doc_as_vector(index, df), query_vector))
+        return cosines
 
     def make_tables(self) -> None:
         # making index table
@@ -30,6 +35,7 @@ class Calculation:
         self.extract_idf_table(5)  # 5 -> cause current indexed document count is 5
 
         print("Calculating tf-idf...")
+        self.extract_tfidf_table()
 
     def dot_product(self, vector1: list[int | float], vector2: list[int | float]) -> float:
         new_vector = []
@@ -63,16 +69,16 @@ class Calculation:
             tfidf.append(self.calculate_normal_tfidf(tfs[index], idf))
         return tfidf
 
-    def vector_size(self, vector: list[int | float]) -> float:
+    def get_vector_size(self, vector: list[int | float]) -> float:
         total_sum = 0
         for index in range(len(vector)):
             total_sum += math.pow(vector[index], 2)
         return math.sqrt(total_sum)
 
-    def cos_vector(self, vector1: list[int | float], vector2: list[int | float]) -> float:
+    def get_cos_vector(self, vector1: list[int | float], vector2: list[int | float]) -> float:
         dot_result = self.dot_product(vector1, vector2)
-        vector1_size = self.vector_size(vector1)
-        vector2_size = self.vector_size(vector2)
+        vector1_size = self.get_vector_size(vector1)
+        vector2_size = self.get_vector_size(vector2)
         return dot_result / (vector1_size * vector2_size)
 
     def make_vector_from_query(self, query_list: list[str]) -> list[int]:
@@ -140,3 +146,8 @@ class Calculation:
         # TODO: Put the doc names on top of the Excel file for user presentation - columns=docs_list
         new_df = pd.DataFrame(tfidf)
         new_df.to_excel('../tfidf.xlsx')
+
+    def get_doc_as_vector(self, doc_num: int, df: pd.DataFrame) -> list[float]:
+        # TODO: Keep Excel file in memory for optimization
+        all_cols = df[df.columns[1:]]
+        return [i[doc_num] for i in all_cols.values]
