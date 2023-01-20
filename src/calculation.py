@@ -11,16 +11,16 @@ class Calculation:
     def get_ranked_documents(self, query: list[str]):
         query_vector = self.make_vector_from_query(query)
         cosines = []
-        df = pd.read_excel('../tfidf.xlsx', skiprows=0)
+        data_frame = pd.read_excel('../tfidf.xlsx', skiprows=0)
         for index in range(5):
-            cosines.append(self.get_cos_vector(self.get_doc_as_vector(index, df), query_vector))
+            cosines.append(self.get_cos_vector(self.get_doc_as_vector(index, data_frame), query_vector))
         return cosines
 
     def make_tables(self) -> None:
         # making index table
         try:
-            df = pd.read_excel('../index.xlsx')
-            if df.empty:
+            data_frame = pd.read_excel('../index.xlsx')
+            if data_frame.empty:
                 print("Indexing documents...")
                 self.indexer.main()
         except Exception:
@@ -91,23 +91,23 @@ class Calculation:
         return vector
 
     def extract_tf_table(self) -> None:
-        df = pd.read_excel('../index.xlsx', skiprows=0, usecols='A, D')
+        data_frame = pd.read_excel('../index.xlsx', skiprows=0, usecols='A, D')
         terms = []
 
-        for index in range(len(df.values)):
-            terms.append(df.values[index][0])
+        for index in range(len(data_frame.values)):
+            terms.append(data_frame.values[index][0])
 
         docs = set()
         datas = []
 
-        for index2 in range(len(df.values)):
-            pair = dict(eval(df.values[index2][1]))
+        for index2 in range(len(data_frame.values)):
+            pair = dict(eval(data_frame.values[index2][1]))
             docs.update(pair.keys())
 
         docs_list = list(docs)
 
-        for index3 in range(len(df.values)):
-            doc_tf_dict = dict(eval(df.values[index3][1]))
+        for index3 in range(len(data_frame.values)):
+            doc_tf_dict = dict(eval(data_frame.values[index3][1]))
             data = [0] * len(docs_list)
             for index4 in range(len(doc_tf_dict)):
                 data[docs_list.index(list(doc_tf_dict.keys())[index4])] = list(doc_tf_dict.values())[index4]
@@ -117,26 +117,26 @@ class Calculation:
         new_df.to_excel('../tf_table.xlsx')
 
     def extract_idf_table(self, total_doc_count: int) -> None:
-        df = pd.read_excel('../index.xlsx', skiprows=0, usecols='A, C')
+        data_frame = pd.read_excel('../index.xlsx', skiprows=0, usecols='A, C')
         terms = []
-        for index in range(len(df.values)):
-            terms.append(df.values[index][0])
+        for index in range(len(data_frame.values)):
+            terms.append(data_frame.values[index][0])
 
         dfs = []
-        for index in range(len(df.values)):
-            dfs.append(df.values[index][1])
+        for index in range(len(data_frame.values)):
+            dfs.append(data_frame.values[index][1])
 
         new_df = pd.DataFrame(self.calculate_normal_idf_for_all(dfs, total_doc_count), index=terms)
         new_df.to_excel('../idf_table.xlsx')
 
 
     def extract_tfidf_table(self):
-        df = pd.read_excel('../idf_table.xlsx', skiprows=0, usecols='B')
-        idfs = df.values.tolist()
+        data_frame = pd.read_excel('../idf_table.xlsx', skiprows=0, usecols='B')
+        idfs = data_frame.values.tolist()
         flat_idfs = sum(idfs, [])
 
-        df = pd.read_excel('../tf_table.xlsx', skiprows=0)
-        cols = df[df.columns[1:]]
+        data_frame = pd.read_excel('../tf_table.xlsx', skiprows=0)
+        cols = data_frame[data_frame.columns[1:]]
         index = 0
         tfidf = []
         for col in cols.values:
@@ -147,7 +147,7 @@ class Calculation:
         new_df = pd.DataFrame(tfidf)
         new_df.to_excel('../tfidf.xlsx')
 
-    def get_doc_as_vector(self, doc_num: int, df: pd.DataFrame) -> list[float]:
+    def get_doc_as_vector(self, doc_num: int, data_frame: pd.DataFrame) -> list[float]:
         # TODO: Keep Excel file in memory for optimization
-        all_cols = df[df.columns[1:]]
+        all_cols = data_frame[data_frame.columns[1:]]
         return [i[doc_num] for i in all_cols.values]
