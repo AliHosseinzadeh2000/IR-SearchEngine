@@ -10,11 +10,14 @@ class Calculation:
 
     def get_ranked_documents(self, query: list[str]):
         query_vector = self.make_vector_from_query(query)
-        cosines = []
+        docs = self.indexer.get_documents_list_and_count()[0]
+        cosines = dict()
+        for index in range(5):
+            cosines[docs[index]] = 0
         data_frame = pd.read_excel('../tfidf.xlsx', skiprows=0)
         for index in range(5):
-            cosines.append(self.get_cos_vector(self.get_doc_as_vector(index, data_frame), query_vector))
-        return cosines
+            cosines[docs[index]] = (self.get_cos_vector(self.get_doc_as_vector(index, data_frame), query_vector))
+        return dict(sorted(cosines.items(), key=lambda item:item[1], reverse=True))
 
     def make_tables(self) -> None:
         # making index table
