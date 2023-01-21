@@ -105,6 +105,7 @@ class Calculation:
             docs.update(pair.keys())
 
         docs_list = list(docs)
+        docs_list = sorted(docs_list, key=str.casefold)
 
         for index3 in range(len(data_frame.values)):
             doc_tf_dict = dict(eval(data_frame.values[index3][1]))
