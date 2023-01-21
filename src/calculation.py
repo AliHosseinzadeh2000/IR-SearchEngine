@@ -12,12 +12,12 @@ class Calculation:
         query_vector = self.make_vector_from_query(query)
         docs = self.indexer.get_documents_list_and_count()[0]
         cosines = dict()
-        for index in range(5):
-            cosines[docs[index]] = 0
         data_frame = pd.read_excel('../tfidf.xlsx', skiprows=0)
+
         for index in range(5):
             cosines[docs[index]] = (self.get_cos_vector(self.get_doc_as_vector(index, data_frame), query_vector))
-        return dict(sorted(cosines.items(), key=lambda item:item[1], reverse=True))
+
+        return dict(sorted(cosines.items(), key=lambda item: item[1], reverse=True))
 
     def make_tables(self) -> None:
         # making index table
@@ -96,15 +96,12 @@ class Calculation:
     def extract_tf_table(self) -> None:
         data_frame = pd.read_excel('../index.xlsx', skiprows=0, usecols='A, D')
         terms = []
-
-        for index in range(len(data_frame.values)):
-            terms.append(data_frame.values[index][0])
-
         docs = set()
         datas = []
 
-        for index2 in range(len(data_frame.values)):
-            pair = dict(eval(data_frame.values[index2][1]))
+        for index in range(len(data_frame.values)):
+            terms.append(data_frame.values[index][0])
+            pair = dict(eval(data_frame.values[index][1]))
             docs.update(pair.keys())
 
         docs_list = list(docs)
@@ -122,16 +119,13 @@ class Calculation:
     def extract_idf_table(self, total_doc_count: int) -> None:
         data_frame = pd.read_excel('../index.xlsx', skiprows=0, usecols='A, C')
         terms = []
-        for index in range(len(data_frame.values)):
-            terms.append(data_frame.values[index][0])
-
         dfs = []
         for index in range(len(data_frame.values)):
+            terms.append(data_frame.values[index][0])
             dfs.append(data_frame.values[index][1])
 
         new_df = pd.DataFrame(self.calculate_normal_idf_for_all(dfs, total_doc_count), index=terms)
         new_df.to_excel('../idf_table.xlsx')
-
 
     def extract_tfidf_table(self):
         data_frame = pd.read_excel('../idf_table.xlsx', skiprows=0, usecols='B')
