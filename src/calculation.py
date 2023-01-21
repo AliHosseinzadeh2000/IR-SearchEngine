@@ -11,10 +11,10 @@ class Calculation:
         self.indexer = Indexer()
 
     def get_ranked_documents(self, query: list[str]):
+        data_frame = pd.read_excel('../tfidf.xlsx', skiprows=0)
         query_vector = self.make_vector_from_query(query)
         docs = self.indexer.get_documents_list_and_count()[0]
         cosines = dict()
-        data_frame = pd.read_excel('../tfidf.xlsx', skiprows=0)
 
         for index in range(5):
             cosines[docs[index]] = (self.get_cos_vector(self.get_doc_as_vector(index, data_frame), query_vector))
@@ -66,10 +66,16 @@ class Calculation:
     def calculate_normal_tfidf(self, tf: int, idf: float) -> float:
         return float(math.log(1 + float(tf), 10)) * idf
 
-# Calculates tf-idf for a complete row (for a term in each document)
-    def calculate_normal_tfidf_for_all(self, tfs: list[int], idf: float) -> list[float]:
+    # Calculates tf-idf for a complete row (for a term in each document)
+    def calculate_normal_tfidf_for_row(self, tfs: list[int], idf: float) -> list[float]:
         tfidf = []
         tfidf = [math.log(1 + tf, 10) * idf for tf in tfs]
+        return tfidf
+
+    # Calculates tf-idf for a complete column
+    def calculate_normal_tfidf_for_col(self, tfs: list[int], idfs: list[float]) -> list[float]:
+        tfidf = []
+        tfidf = [math.log(1 + tf, 10) * idf for tf, idf in zip(tfs, idfs)]
         return tfidf
 
     def get_vector_size(self, vector: list[int | float]) -> float:
@@ -93,7 +99,7 @@ class Calculation:
                 pass
         return vector
 
-    #TODO: Further optimimzation
+    # TODO: Further optimization
     def extract_tf_table(self) -> None:
         data_frame = pd.read_excel('../index.xlsx', skiprows=0, usecols='A, D')
 
@@ -141,25 +147,22 @@ class Calculation:
         new_df = pd.DataFrame(self.calculate_normal_idf_for_all(dfs, total_doc_count), index=terms)
         new_df.to_excel('../idf_table.xlsx')
 
-    # TODO: Further optimization
     def extract_tfidf_table(self):
         data_frame_idf = pd.read_excel('../idf_table.xlsx', skiprows=0, usecols='B')
         data_frame = pd.read_excel('../tf_table.xlsx', skiprows=0)
 
-        start = time.time()
         idfs = data_frame_idf.values.tolist()
         idfs = list(itertools.chain(*idfs))
         cols = data_frame[data_frame.columns[1:]]
         index = 0
         tfidf = []
-        for col in cols.values:
-            tfidf.append(self.calculate_normal_tfidf_for_all(col, idfs[index]))
-            index += 1
-        print(time.time() - start)
+        column = list(cols.iloc[:, 1])
+        for index in range(5):
+            tfidf.append(self.calculate_normal_tfidf_for_col(list(cols.iloc[:, index]), idfs))
 
-        # TODO: Put the doc names on top of the Excel file for user presentation - columns=docs_list
-        new_df = pd.DataFrame(tfidf)
-        new_df.to_excel('../tfidf.xlsx')
+        new_data_frame = pd.DataFrame(tfidf)
+        new_data_frame = new_data_frame.transpose()
+        new_data_frame.to_excel('../tfidf.xlsx')
 
     def get_doc_as_vector(self, doc_num: int, data_frame: pd.DataFrame) -> list[float]:
         all_cols = data_frame[data_frame.columns[1:]]
