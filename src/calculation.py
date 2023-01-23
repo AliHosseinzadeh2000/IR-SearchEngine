@@ -3,21 +3,23 @@ import math
 import time
 import pandas as pd
 from src.indexer import Indexer
+from src.indexer_v2 import IndexerV2
 
 
 class Calculation:
 
     def __init__(self):
-        self.indexer = Indexer()
+        self.indexer = IndexerV2()
+        self.docs, self.total_doc_count = self.indexer.get_documents_list()
 
     def get_ranked_documents(self, query: list[str]):
         data_frame = pd.read_excel('../tfidf.xlsx', skiprows=0)
         query_vector = self.make_vector_from_query(query)
-        docs = self.indexer.get_documents_list_and_count()[0]
+        # docs, total_doc_count = self.indexer.get_documents_list()[0]  # is is now in __init__, remove this!
         cosines = dict()
 
-        for index in range(5):
-            cosines[docs[index]] = (self.get_cos_vector(self.get_doc_as_vector(index, data_frame), query_vector))
+        for index in range(5):  # todo : replace 5 with 'self.total_doc_count'
+            cosines[self.docs[index][0]] = (self.get_cos_vector(self.get_doc_as_vector(index, data_frame), query_vector))
 
         return dict(sorted(cosines.items(), key=lambda item: item[1], reverse=True))
 
@@ -32,15 +34,32 @@ class Calculation:
             print("Indexing documents...")
             self.indexer.main()
 
-        print("Extracting tf table...")
-        self.extract_tf_table()
+        try:
+            data_frame = pd.read_excel('../tf_table.xlsx')
+            if data_frame.empty:
+                print("Extracting tf table...")
+                self.extract_tf_table()
+        except Exception:
+            print("Extracting tf table...")
+            self.extract_tf_table()
 
-        print("Calculating idf...")
-        # total_doc_count = indexer.get_documents_list_and_count()[1]
-        self.extract_idf_table(5)  # 5 -> cause current indexed document count is 5
+        try:
+            data_frame = pd.read_excel('../idf_table.xlsx')
+            if data_frame.empty:
+                print("Calculating idf...")
+                self.extract_idf_table(5)  # todo : replace 5 with 'self.total_doc_count'
+        except Exception:
+            print("Calculating idf...")
+            self.extract_idf_table(5)  # todo : replace 5 with 'self.total_doc_count'
 
-        print("Calculating tf-idf...")
-        self.extract_tfidf_table()
+        try:
+            data_frame = pd.read_excel('../tfidf.xlsx')
+            if data_frame.empty:
+                print("Calculating tf-idf...")
+                self.extract_tfidf_table()
+        except Exception:
+            print("Calculating tf-idf...")
+            self.extract_tfidf_table()
 
     def dot_product(self, vector1: list[int | float], vector2: list[int | float]) -> float:
         new_vector = []
@@ -59,7 +78,6 @@ class Calculation:
         return math.log(total_doc_count / df, 10)
 
     def calculate_normal_idf_for_all(self, dfs: list[int], total_doc_count: int) -> list[float]:
-        idfs = []
         idfs = [math.log(total_doc_count / df, 10) for df in dfs]
         return idfs
 
@@ -68,13 +86,11 @@ class Calculation:
 
     # Calculates tf-idf for a complete row (for a term in each document)
     def calculate_normal_tfidf_for_row(self, tfs: list[int], idf: float) -> list[float]:
-        tfidf = []
         tfidf = [math.log(1 + tf, 10) * idf for tf in tfs]
         return tfidf
 
     # Calculates tf-idf for a complete column
     def calculate_normal_tfidf_for_col(self, tfs: list[int], idfs: list[float]) -> list[float]:
-        tfidf = []
         tfidf = [math.log(1 + tf, 10) * idf for tf, idf in zip(tfs, idfs)]
         return tfidf
 
@@ -154,9 +170,8 @@ class Calculation:
         idfs = data_frame_idf.values.tolist()
         idfs = list(itertools.chain(*idfs))
         cols = data_frame[data_frame.columns[1:]]
-        index = 0
+
         tfidf = []
-        column = list(cols.iloc[:, 1])
         for index in range(5):
             tfidf.append(self.calculate_normal_tfidf_for_col(list(cols.iloc[:, index]), idfs))
 

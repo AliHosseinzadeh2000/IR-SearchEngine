@@ -1,3 +1,5 @@
+from typing import Tuple
+
 from bs4 import BeautifulSoup
 import requests
 import time
@@ -9,6 +11,7 @@ from src.normaziler import Normalizer
 
 
 class IndexerV2:
+    total_docs_count = 0
 
     def __init__(self):
         self.stop_words = self.get_stop_words_from_file('../resources/stop_words_english.txt')
@@ -52,11 +55,12 @@ class IndexerV2:
 
             questions = questions_section.find_all(class_='s-post-summary js-post-summary')
 
-            for question in questions:
+            for num, question in enumerate(questions):
                 title = question.find('h3', class_='s-post-summary--content-title').text.strip()
                 link = question.find('h3', class_='s-post-summary--content-title').a.get('href')  # https://stackoverflow.com + ...
 
                 all_questions.append([title, link])
+                IndexerV2.total_docs_count += 1
 
             print('###################################')
             page_number += 1
@@ -167,8 +171,12 @@ class IndexerV2:
             return False
         return True
 
+    def get_documents_list(self) -> tuple[list, int]:
+        df = pd.read_excel('../crawled_data.xlsx', skiprows=0, usecols='C').values.tolist()
+        return df, len(df)
+
     def get_term_index_from_list(self, term: str):  # todo 1: specify return type  -  todo2: catch exception
-        df = pd.read_excel('../index.xlsx', skiprows=0, usecols='A')
+        df = pd.read_excel('../index.xlsx', skiprows=0, usecols='A')  # todo : این نباید هر سری از فایل بخونه برای هر term!
         termlist = np.array(df.values.tolist()).flatten()
         return np.where(termlist == term)[0][0]
 
@@ -176,5 +184,7 @@ class IndexerV2:
         df = pd.read_excel('../index.xlsx', skiprows=0, usecols='A')
         return df.shape[0]
 
-i = IndexerV2()
-i.run_scheduler()
+
+if __name__ == '__main__':
+    i = IndexerV2()
+    i.get_documents_list()
