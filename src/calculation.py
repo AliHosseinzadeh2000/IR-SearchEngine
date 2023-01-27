@@ -43,6 +43,7 @@ class Calculation:
             # self.index_file = pd.read_excel('../index.xlsx', skiprows=0)
 
         self.docs, self.total_doc_count = self.indexer.get_indexed_documents_list_and_count()
+        self.docs = sorted(self.docs, key=str.casefold)
 
         try:
             # self.tf_table = pd.read_excel('../tf_table.xlsx', skiprows=0)

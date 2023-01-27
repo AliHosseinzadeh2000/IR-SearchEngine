@@ -3,9 +3,9 @@ from normaziler import Normalizer
 
 
 def main():
+    print("Initializing...")
     normalizer = Normalizer()
     calculation = Calculation()
-    print("Initializing...")
 
     while True:
         query = input("Enter your query please:\t").strip().split()

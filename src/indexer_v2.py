@@ -196,7 +196,7 @@ class IndexerV2:
 
     def get_term_index_from_list(self, term: str):  # todo 1: specify return type  -  todo2: catch exception
         # df = pd.read_excel('../index.xlsx', skiprows=0, usecols='A')  # todo : این نباید هر سری از فایل بخونه برای هر term!
-        termlist = np.array(self.index_file.values.tolist()).flatten()  # just add column 'A'
+        termlist = np.array(self.index_file.iloc[:, 0])
         return np.where(termlist == term)[0][0]
 
     def get_term_count(self) -> int:
