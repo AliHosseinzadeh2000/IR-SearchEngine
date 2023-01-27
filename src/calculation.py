@@ -103,8 +103,6 @@ class Calculation:
     def extract_tf_table(self) -> None:
         data_frame = pd.read_excel('../index.xlsx', skiprows=0, usecols='A, D')
 
-        start = time.time()
-
         terms = []
         docs = set()
         datas = []
@@ -127,7 +125,6 @@ class Calculation:
                 data[docs_list.index(list(doc_tf_dict.keys())[index2])] = list(doc_tf_dict.values())[index2]
             datas.append(data)
 
-        print(time.time() - start)
         new_df = pd.DataFrame(datas, index=terms, columns=docs_list)
         new_df.to_excel('../tf_table.xlsx')
 

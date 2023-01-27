@@ -3,9 +3,9 @@ from normaziler import Normalizer
 
 
 def main():
+    print("Initializing...")
     normalizer = Normalizer()
     calculation = Calculation()
-    print("Initializing...")
     calculation.make_tables()  # todo : move this to the 'calculation' module
 
     while True:
