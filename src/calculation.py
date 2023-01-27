@@ -14,9 +14,10 @@ class Calculation:
         data_frame = pd.read_excel('../tfidf.xlsx', skiprows=0)
         query_vector = self.make_vector_from_query(query)
         docs = self.indexer.get_documents_list_and_count()[0]
+        docs = sorted(docs, key=str.casefold)
         cosines = dict()
 
-        for index in range(5):
+        for index in range(self.indexer.get_documents_list_and_count()[1]):
             cosines[docs[index]] = (self.get_cos_vector(self.get_doc_as_vector(index, data_frame), query_vector))
 
         return dict(sorted(cosines.items(), key=lambda item: item[1], reverse=True))
@@ -37,7 +38,7 @@ class Calculation:
 
         print("Calculating idf...")
         # total_doc_count = indexer.get_documents_list_and_count()[1]
-        self.extract_idf_table(5)  # 5 -> cause current indexed document count is 5
+        self.extract_idf_table(self.indexer.get_documents_list_and_count()[1])  # 5 -> cause current indexed document count is 5
 
         print("Calculating tf-idf...")
         self.extract_tfidf_table()
@@ -154,7 +155,7 @@ class Calculation:
         index = 0
         tfidf = []
         column = list(cols.iloc[:, 1])
-        for index in range(5):
+        for index in range(self.indexer.get_documents_list_and_count()[1]):
             tfidf.append(self.calculate_normal_tfidf_for_col(list(cols.iloc[:, index]), idfs))
 
         new_data_frame = pd.DataFrame(tfidf)
