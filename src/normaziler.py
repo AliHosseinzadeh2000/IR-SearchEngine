@@ -9,10 +9,23 @@ class Normalizer:
     def __init__(self):
         self.porter_stemmer = PorterStemmer()
         self.wordnet_lemmatizer = WordNetLemmatizer()
+        self.stop_words = self.get_stop_words_from_file('../resources/stop_words_english.txt')
         nltk.download('wordnet')
 
+    @staticmethod
+    def get_stop_words_from_file(filename: str) -> list[str]:
+        with open(filename, 'r', encoding='utf-8') as file:
+            stop_words = file.read().splitlines()
+
+            return stop_words
+
     def normalize_word_list(self, word_list) -> list[str]:
-        return [self.normalize_a_word(word.lower()) for word in word_list]
+        normal_word_list = []
+        for word in word_list:
+            if word in self.stop_words:
+                continue
+            normal_word_list.append(self.normalize_a_word(word.lower()))
+        return normal_word_list
 
     def normalize_a_word(self, word: str) -> str:
         word = self.remove_digits_from_word(word)

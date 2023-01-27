@@ -10,33 +10,51 @@ class Calculation:
 
     def __init__(self):
         self.indexer = IndexerV2()
-        self.docs, self.total_doc_count = self.indexer.get_documents_list()
+        self.tf_table = None
+        self.idf_table = None
+        self.tfidf_table = None
+        self.docs = None
+        self.total_doc_count = None
+        self.make_tables()
 
     def get_ranked_documents(self, query: list[str]):
-        data_frame = pd.read_excel('../tfidf.xlsx', skiprows=0)
         query_vector = self.make_vector_from_query(query)
-        # docs, total_doc_count = self.indexer.get_documents_list()[0]  # is is now in __init__, remove this!
         cosines = dict()
 
-        for index in range(5):  # todo : replace 5 with 'self.total_doc_count'
-            cosines[self.docs[index][0]] = (self.get_cos_vector(self.get_doc_as_vector(index, data_frame), query_vector))
+        for index in range(self.total_doc_count):  # todo : replace 5 with 'self.indexer.total_indexed_document_count'
+            try:
+                cosines[self.docs[index]] = (self.get_cos_vector(self.get_doc_as_vector(index, self.tfidf_table), query_vector))
+            except Exception as e:
+                pass
 
         return dict(sorted(cosines.items(), key=lambda item: item[1], reverse=True))
 
     def make_tables(self) -> None:
         # making index table
         try:
-            data_frame = pd.read_excel('../index.xlsx')
-            if data_frame.empty:
+            # self.index_file = pd.read_excel('../index.xlsx', skiprows=0)
+            if self.indexer.index_file.empty:
                 print("Indexing documents...")
                 self.indexer.main()
+                # self.index_file = pd.read_excel('../index.xlsx', skiprows=0)
         except Exception:
             print("Indexing documents...")
             self.indexer.main()
+            # self.index_file = pd.read_excel('../index.xlsx', skiprows=0)
+
+        self.docs, self.total_doc_count = self.indexer.get_indexed_documents_list_and_count()
 
         try:
-            data_frame = pd.read_excel('../tf_table.xlsx')
-            if data_frame.empty:
+            # self.tf_table = pd.read_excel('../tf_table.xlsx', skiprows=0)
+            if not self.tf_table.empty:
+                pass
+        except AttributeError:
+            try:
+                self.tf_table = pd.read_excel('../tf_table.xlsx', skiprows=0)
+                if self.tf_table.empty:
+                    print("Extracting tf table...")
+                    self.extract_tf_table()
+            except Exception:
                 print("Extracting tf table...")
                 self.extract_tf_table()
         except Exception:
@@ -44,22 +62,40 @@ class Calculation:
             self.extract_tf_table()
 
         try:
-            data_frame = pd.read_excel('../idf_table.xlsx')
-            if data_frame.empty:
+            # self.idf_table = pd.read_excel('../idf_table.xlsx', skiprows=0, usecols='B')
+            if not self.idf_table.empty:
+                pass
+        except AttributeError:
+            try:
+                self.idf_table = pd.read_excel('../idf_table.xlsx', skiprows=0, usecols='B')
+                if self.idf_table.empty:
+                    print("Calculating idf...")
+                    self.extract_idf_table(self.total_doc_count)  # todo : replace 5 with 'self.indexer.total_indexed_document_count'
+            except Exception:
                 print("Calculating idf...")
-                self.extract_idf_table(5)  # todo : replace 5 with 'self.total_doc_count'
+                self.extract_idf_table(self.total_doc_count)
         except Exception:
             print("Calculating idf...")
-            self.extract_idf_table(5)  # todo : replace 5 with 'self.total_doc_count'
+            self.extract_idf_table(self.total_doc_count)  # todo : replace 5 with 'self.indexer.total_indexed_document_count'
 
         try:
-            data_frame = pd.read_excel('../tfidf.xlsx')
-            if data_frame.empty:
+            # self.tfidf_table = pd.read_excel('../tfidf.xlsx', skiprows=0)
+            if not self.tfidf_table.empty:
+                pass
+        except AttributeError:
+            try:
+                self.tfidf_table = pd.read_excel('../tfidf.xlsx', skiprows=0)
+                if self.tfidf_table.empty:
+                    print("Calculating tf-idf...")
+                    self.extract_tfidf_table()
+            except Exception:
                 print("Calculating tf-idf...")
                 self.extract_tfidf_table()
         except Exception:
             print("Calculating tf-idf...")
             self.extract_tfidf_table()
+
+        # self.indexer.index_file = self.indexer.index_file[:-2]  # remove the 2 extra rows in index file
 
     def dot_product(self, vector1: list[int | float], vector2: list[int | float]) -> float:
         new_vector = []
@@ -117,7 +153,7 @@ class Calculation:
 
     # TODO: Further optimization
     def extract_tf_table(self) -> None:
-        data_frame = pd.read_excel('../index.xlsx', skiprows=0, usecols='A, D')
+        data_frame = self.indexer.index_file[:-2].loc[:, ['Unnamed: 0', 'including_docs']]  # todo check if you need to remove last 2 or not
 
         start = time.time()
 
@@ -146,9 +182,10 @@ class Calculation:
         print(time.time() - start)
         new_df = pd.DataFrame(datas, index=terms, columns=docs_list)
         new_df.to_excel('../tf_table.xlsx')
+        self.tf_table = pd.read_excel('../tf_table.xlsx', skiprows=0)
 
     def extract_idf_table(self, total_doc_count: int) -> None:
-        data_frame = pd.read_excel('../index.xlsx', skiprows=0, usecols='A, C')
+        data_frame = self.indexer.index_file[:-2].loc[:, ['Unnamed: 0', 'df']]  # todo check if you need to remove last 2 or not
         terms = []
         dfs = []
 
@@ -162,22 +199,24 @@ class Calculation:
 
         new_df = pd.DataFrame(self.calculate_normal_idf_for_all(dfs, total_doc_count), index=terms)
         new_df.to_excel('../idf_table.xlsx')
+        self.idf_table = pd.read_excel('../idf_table.xlsx', skiprows=0, usecols='B')
 
     def extract_tfidf_table(self):
-        data_frame_idf = pd.read_excel('../idf_table.xlsx', skiprows=0, usecols='B')
-        data_frame = pd.read_excel('../tf_table.xlsx', skiprows=0)
+        # data_frame_idf = pd.read_excel('../idf_table.xlsx', skiprows=0, usecols='B')      # now in __init__ .
+        # data_frame = pd.read_excel('../tf_table.xlsx', skiprows=0)                        # now in __init__ .
 
-        idfs = data_frame_idf.values.tolist()
+        idfs = self.idf_table.values.tolist()
         idfs = list(itertools.chain(*idfs))
-        cols = data_frame[data_frame.columns[1:]]
+        cols = self.tf_table[self.tf_table.columns[1:]]
 
         tfidf = []
-        for index in range(5):
+        for index in range(self.total_doc_count):
             tfidf.append(self.calculate_normal_tfidf_for_col(list(cols.iloc[:, index]), idfs))
 
         new_data_frame = pd.DataFrame(tfidf)
         new_data_frame = new_data_frame.transpose()
         new_data_frame.to_excel('../tfidf.xlsx')
+        self.tfidf_table = pd.read_excel('../tfidf.xlsx', skiprows=0)
 
     def get_doc_as_vector(self, doc_num: int, data_frame: pd.DataFrame) -> list[float]:
         all_cols = data_frame[data_frame.columns[1:]]

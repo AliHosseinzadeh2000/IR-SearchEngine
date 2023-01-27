@@ -1,5 +1,3 @@
-from typing import Tuple
-
 from bs4 import BeautifulSoup
 import requests
 import time
@@ -8,14 +6,24 @@ import numpy as np
 import re
 import schedule
 from src.normaziler import Normalizer
+import ast
 
 
 class IndexerV2:
-    total_docs_count = 0
 
     def __init__(self):
+        self.try_to_read_index_file()
+        self.indexed_documents_list = None
+        self.indexed_documents_count = None
         self.stop_words = self.get_stop_words_from_file('../resources/stop_words_english.txt')
         self.normalizer = Normalizer()
+
+    def try_to_read_index_file(self) -> None:
+        try:
+            self.index_file = pd.read_excel('../index.xlsx', skiprows=0)
+        except Exception:
+            self.index_file = None
+            pass
 
     @staticmethod
     def get_stop_words_from_file(filename: str) -> list[str]:
@@ -38,6 +46,9 @@ class IndexerV2:
         final_dict = self.index_all_docs()
         self.save_to_file(final_dict)
         print(f'^^^^^^^^^ it took {time.time() - start_time}s to index all docs ^^^^^^^^^')
+        self.index_file = pd.read_excel('../index.xlsx', skiprows=0)
+        self.indexed_documents_list, self.indexed_documents_count = self.get_indexed_documents_list_and_count()
+        # self.index_file = self.index_file[:-2]
 
     def crawl_list_of_questions(self) -> list:
         url = 'https://stackoverflow.com/questions?tab=votes&pagesize=50'
@@ -60,7 +71,6 @@ class IndexerV2:
                 link = question.find('h3', class_='s-post-summary--content-title').a.get('href')  # https://stackoverflow.com + ...
 
                 all_questions.append([title, link])
-                IndexerV2.total_docs_count += 1
 
             print('###################################')
             page_number += 1
@@ -69,14 +79,16 @@ class IndexerV2:
 
     def crawl_detail_info(self, list_of_questions: list[list[str]]) -> None:
         final_list = []
-        for item in list_of_questions:
+        for question in list_of_questions:
             try:
-                title = item[0]
-                link = item[1]
+                title = question[0]
+                link = question[1]
                 content, views, votes = self.add_page_content_and_views_and_votes_to_excel(
                     'https://stackoverflow.com' + link)
 
                 final_list.append([title, link, content, views, votes])
+                # self.indexed_documents_list.append([title, link, content, views, votes])
+                # self.indexed_documents_count += 1
             except Exception:
                 pass
 
@@ -111,18 +123,24 @@ class IndexerV2:
 
         return BeautifulSoup(page.content, 'html.parser')
 
-    def index_all_docs(self) -> dict:
-        final_dict = {}
+    def index_all_docs(self) -> [dict]:
+        terms_dict = {}
         df = pd.read_excel('../crawled_data.xlsx', skiprows=0, usecols=['title', 'link', 'content', 'views', 'votes'])
+        indexed_documents_count = 0
+        indexed_documents_list = []
         for item in df.values.tolist():
             try:
-                self.index_a_document(item[2], item[1], final_dict)
+                self.index_a_document(item[2], item[1], terms_dict)
+                indexed_documents_count += 1
+                indexed_documents_list.append(item[1])
             except Exception:
                 pass
 
-        return final_dict
+        terms_dict['indexed_documents_count'] = [indexed_documents_count, 0, 0]
+        terms_dict['indexed_documents_list'] = [indexed_documents_list, 0, 0]
+        return terms_dict
 
-    def index_a_document(self, document_text: str, document_link: str, final_dict: dict) -> dict:
+    def index_a_document(self, document_text: str, document_link: str, terms_dict: dict) -> dict:
         for word in self.get_words_from_text(document_text):  # TODO: check logic !!!
             try:
                 word = word.lower()
@@ -132,16 +150,16 @@ class IndexerV2:
 
                 word = self.normalizer.normalize_a_word(word)
 
-                if word not in final_dict.keys():
-                    final_dict[word] = [1, 1, {}]
-                    final_dict[word][2] = self.get_including_docs(document_link, final_dict[word][2])
+                if word not in terms_dict.keys():
+                    terms_dict[word] = [1, 1, {}]
+                    terms_dict[word][2] = self.get_including_docs(document_link, terms_dict[word][2])
                 else:
-                    final_dict[word][0] += 1
-                    final_dict[word][2] = self.get_including_docs(document_link, final_dict[word][2])
-                    final_dict[word][1] = len(set(final_dict[word][2]))
+                    terms_dict[word][0] += 1
+                    terms_dict[word][2] = self.get_including_docs(document_link, terms_dict[word][2])
+                    terms_dict[word][1] = len(set(terms_dict[word][2]))
             except Exception:
                 print('An unknown problem occurred during indexing!')
-        return final_dict
+        return terms_dict
 
     def get_including_docs(self, doc_name: str, including_docs: dict):
         if including_docs.get(doc_name) is None:
@@ -152,7 +170,8 @@ class IndexerV2:
         return including_docs
 
     def save_to_file(self, final_dict: dict) -> None:
-        df = pd.DataFrame(data=final_dict).T
+        df = pd.DataFrame(data=final_dict).transpose()
+        df.columns = ['cf', 'df', 'including_docs']
         df.to_excel('../index.xlsx')
 
     def get_words_from_text(self, text: str) -> list[str]:
@@ -176,15 +195,19 @@ class IndexerV2:
         return df, len(df)
 
     def get_term_index_from_list(self, term: str):  # todo 1: specify return type  -  todo2: catch exception
-        df = pd.read_excel('../index.xlsx', skiprows=0, usecols='A')  # todo : این نباید هر سری از فایل بخونه برای هر term!
-        termlist = np.array(df.values.tolist()).flatten()
+        # df = pd.read_excel('../index.xlsx', skiprows=0, usecols='A')  # todo : این نباید هر سری از فایل بخونه برای هر term!
+        termlist = np.array(self.index_file.values.tolist()).flatten()  # just add column 'A'
         return np.where(termlist == term)[0][0]
 
     def get_term_count(self) -> int:
-        df = pd.read_excel('../index.xlsx', skiprows=0, usecols='A')
-        return df.shape[0]
+        # df = pd.read_excel('../index.xlsx', skiprows=0, usecols='A')
+        return self.index_file.shape[0] - 2  # just add column 'A'  # todo how the fuck !? (needs minus 2)
 
-
-if __name__ == '__main__':
-    i = IndexerV2()
-    i.get_documents_list()
+    def get_indexed_documents_list_and_count(self) -> object:
+        values = self.index_file.iloc[-1:-3:-1].values
+        self.indexed_documents_list = ast.literal_eval(values[0][1])
+        self.indexed_documents_count = values[1][1]
+        # termlist = np.array(self.index_file.values.tolist()).flatten()
+        # self.indexed_documents_list = np.where(termlist == 'indexed_documents_list')[0][0]
+        # self.indexed_documents_count = np.where(termlist == 'indexed_documents_count')[0][0]
+        return self.indexed_documents_list, self.indexed_documents_count
