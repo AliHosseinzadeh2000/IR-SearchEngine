@@ -22,7 +22,7 @@ class Calculation:
 
         for index in range(len(self.docs)):
             cosines[self.docs[index]] = (self.get_cos_vector(self.get_doc_as_vector(index, self.tfidf_table), query_vector))
-            
+
         return dict(sorted(cosines.items(), key=lambda item: item[1], reverse=True))
 
     def make_tables(self) -> None:
