@@ -3,6 +3,7 @@ import math
 import time
 import pandas as pd
 from src.indexer_v2 import IndexerV2
+import numpy as np
 
 
 class Calculation:
@@ -94,10 +95,8 @@ class Calculation:
         total_sum = 0
 
         if len(vector1) == len(vector2):
-            for index in range(len(vector1)):
-                new_vector.append(vector1[index] * vector2[index])
-            for index in range(len(new_vector)):
-                total_sum += new_vector[index]
+            new_vector.append([vec1 * vec2 for vec1, vec2 in zip(vector1, vector2)])
+            total_sum = np.sum(np.array(new_vector))
             return total_sum
         else:
             print("Vectors are not the same size")
@@ -124,8 +123,8 @@ class Calculation:
 
     def get_vector_size(self, vector: list[int | float]) -> float:
         total_sum = 0
-        for index in range(len(vector)):
-            total_sum += math.pow(vector[index], 2)
+        powered_list = [math.pow(vec, 2) for vec in vector]
+        total_sum = np.sum(np.array(powered_list))
         return math.sqrt(total_sum)
 
     def get_cos_vector(self, vector1: list[int | float], vector2: list[int | float]) -> float:
@@ -205,5 +204,5 @@ class Calculation:
 
     def get_doc_as_vector(self, doc_num: int, data_frame: pd.DataFrame) -> list[float]:
         all_cols = data_frame[data_frame.columns[1:]]
-        mylist = [i[doc_num] for i in all_cols.values]
+        mylist = all_cols.iloc[:, doc_num]
         return mylist
