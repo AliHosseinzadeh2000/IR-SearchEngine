@@ -1,9 +1,10 @@
 import itertools
 import math
-import time
+from operator import itemgetter
 import pandas as pd
 from src.indexer_v2 import IndexerV2
 import numpy as np
+import re
 
 
 class Calculation:
@@ -17,7 +18,7 @@ class Calculation:
         self.total_doc_count = None
         self.make_tables()
 
-    def get_ranked_documents(self, query: list[str]):
+    def get_ranked_documents(self, query: list[str], query_filters: tuple[str, int] = None):
         query_vector = self.make_vector_from_query(query)
         cosines = dict()
 
@@ -27,7 +28,47 @@ class Calculation:
             except Exception as e:
                 pass
 
-        return dict(sorted(cosines.items(), key=lambda item: item[1], reverse=True))
+        return self.perform_query_filters(list(dict(sorted(cosines.items(), key=lambda item: item[1], reverse=True)).items())[:10], query_filters)
+
+    def perform_query_filters(self, ranked_documents: list, query_filters: tuple[str, int] = None):
+        data_frame = pd.read_excel('../crawled_data.xlsx', skiprows=0, usecols=['link', 'views', 'votes'])
+        final_ranked_documents = []
+
+        for item in ranked_documents:
+            link = 'https://stackoverflow.com' + item[0]
+            score = item[1]
+            row = np.where(data_frame.values == item[0])[0][0]
+            views = data_frame['views'][row]
+            votes = data_frame['votes'][row]
+            final_ranked_documents.append([link, views, votes, score])
+
+        if query_filters:
+            temp_ranked_documents = final_ranked_documents
+            final_ranked_documents = []
+            if query_filters[0] == 'views':
+                for item in temp_ranked_documents:
+                    if item[1] >= query_filters[1]:
+                        final_ranked_documents.append(item)
+                return sorted(final_ranked_documents, key=itemgetter(1))
+            elif query_filters[0] == 'votes':
+                for item in temp_ranked_documents:
+                    if item[2] >= query_filters[1]:
+                        final_ranked_documents.append(item)
+                return sorted(final_ranked_documents, key=itemgetter(2))
+        else:
+            return final_ranked_documents
+
+    def get_query_filters_if_any(self, query: str) -> tuple[str, tuple[str, int]] | tuple[str, None]:
+        filters_pattern = '(VIEWS:[0-9]+)|(VOTES:[0-9]+)'
+        match_obj = re.search(filters_pattern, query)
+        if match_obj:
+            filter_name = re.findall('(.*?):', match_obj[0])[0].lower()
+            filter_number = int(re.findall('\d+', match_obj[0])[0])
+
+            query = re.sub(filters_pattern, '', query)
+            return query, (filter_name, filter_number)
+        else:
+            return query, None
 
     def make_tables(self) -> None:
         # making index table
@@ -92,7 +133,6 @@ class Calculation:
 
     def dot_product(self, vector1: list[int | float], vector2: list[int | float]) -> float:
         new_vector = []
-        total_sum = 0
 
         if len(vector1) == len(vector2):
             new_vector.append([vec1 * vec2 for vec1, vec2 in zip(vector1, vector2)])
@@ -122,7 +162,6 @@ class Calculation:
         return tfidf
 
     def get_vector_size(self, vector: list[int | float]) -> float:
-        total_sum = 0
         powered_list = [math.pow(vec, 2) for vec in vector]
         total_sum = np.sum(np.array(powered_list))
         return math.sqrt(total_sum)

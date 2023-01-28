@@ -46,7 +46,7 @@ class IndexerV2:
         self.crawl_detail_info(list_of_questions)
         final_dict = self.index_all_docs()
         self.save_to_file(final_dict)
-        print(f'~~~~~~~~~~ it took {time.time() - start_time}s to index all docs ~~~~~~~~~~')  # todo: remove this if not needed anymore
+        print(f'~~~~~~~~~~ it took {time.time() - start_time}s to index all docs ~~~~~~~~~~')
         self.index_file = pd.read_excel('../index.xlsx', skiprows=0)
         self.indexed_documents_list, self.indexed_documents_count = self.get_indexed_documents_list_and_count()
 
@@ -57,7 +57,7 @@ class IndexerV2:
         print(f'The spider has started crawling...\U0001F577\U0001F578')
 
         page_number = 1
-        for _ in range(1, 4):  # specify the number of stackoverflow pages to crawl
+        for _ in range(1, 3):  # specify the number of stackoverflow pages to crawl
             if page_number != 1:
                 url = f'https://stackoverflow.com/questions?tab=votes&page={page_number}'
 
@@ -84,8 +84,7 @@ class IndexerV2:
             try:
                 title = question[0]
                 link = question[1]
-                content, views, votes = self.add_page_content_and_views_and_votes_to_excel(
-                    'https://stackoverflow.com' + link)
+                content, views, votes = self.add_page_content_and_views_and_votes_to_excel('https://stackoverflow.com' + link)
 
                 final_list.append([title, link, content, views, votes])
             except Exception:
@@ -192,7 +191,7 @@ class IndexerV2:
         df = pd.read_excel('../crawled_data.xlsx', skiprows=0, usecols='C').values.tolist()
         return df, len(df)
 
-    def get_term_index_from_list(self, term: str):  # todo: specify return type
+    def get_term_index_from_list(self, term: str):
         termlist = np.array(self.index_file.iloc[:, 0])
         return np.where(termlist == term)[0][0]
 

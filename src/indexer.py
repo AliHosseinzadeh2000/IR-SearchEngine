@@ -101,7 +101,7 @@ class Indexer:
             return False
         return True
 
-    def get_term_index_from_list(self, term: str):  # todo: specify return type
+    def get_term_index_from_list(self, term: str):
         df = pd.read_excel('../index.xlsx', skiprows=0, usecols='A')
         termlist = np.array(df.values.tolist()).flatten()
         return np.where(termlist == term)[0][0]
