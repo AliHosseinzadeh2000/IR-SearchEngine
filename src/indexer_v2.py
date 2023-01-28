@@ -33,6 +33,7 @@ class IndexerV2:
             return stop_words
 
     def run_scheduler(self):
+        print('The scheduler will be triggered in a second...')
         schedule.every(1).minutes.do(self.main)
 
         while True:
@@ -45,18 +46,18 @@ class IndexerV2:
         self.crawl_detail_info(list_of_questions)
         final_dict = self.index_all_docs()
         self.save_to_file(final_dict)
-        print(f'^^^^^^^^^ it took {time.time() - start_time}s to index all docs ^^^^^^^^^')
+        print(f'~~~~~~~~~~ it took {time.time() - start_time}s to index all docs ~~~~~~~~~~')  # todo: remove this if not needed anymore
         self.index_file = pd.read_excel('../index.xlsx', skiprows=0)
         self.indexed_documents_list, self.indexed_documents_count = self.get_indexed_documents_list_and_count()
-        # self.index_file = self.index_file[:-2]
 
     def crawl_list_of_questions(self) -> list:
         url = 'https://stackoverflow.com/questions?tab=votes&pagesize=50'
         all_questions = []
 
+        print(f'The spider has started crawling...\U0001F577\U0001F578')
+
         page_number = 1
-        for i in range(1, 3):  # specify the number of stackoverflow pages to crawl  # TODO 1: change limit
-            print('... starting ', i)
+        for _ in range(1, 4):  # specify the number of stackoverflow pages to crawl
             if page_number != 1:
                 url = f'https://stackoverflow.com/questions?tab=votes&page={page_number}'
 
@@ -72,7 +73,7 @@ class IndexerV2:
 
                 all_questions.append([title, link])
 
-            print('###################################')
+            print(f'\textracting links from page {page_number}: Done')
             page_number += 1
 
         return all_questions
@@ -87,8 +88,6 @@ class IndexerV2:
                     'https://stackoverflow.com' + link)
 
                 final_list.append([title, link, content, views, votes])
-                # self.indexed_documents_list.append([title, link, content, views, votes])
-                # self.indexed_documents_count += 1
             except Exception:
                 pass
 
@@ -102,7 +101,6 @@ class IndexerV2:
         page_content = re.sub('[\n|\r]', '', page_content)
 
         views = int(''.join(filter(str.isdigit, soup.find('div', class_='flex--item ws-nowrap mb8')['title'].strip())))
-
         votes = int(soup.find('div', class_='js-vote-count flex--item d-flex fd-column ai-center fc-black-500 fs-title').text.strip())
 
         return page_content, views, votes
@@ -141,7 +139,7 @@ class IndexerV2:
         return terms_dict
 
     def index_a_document(self, document_text: str, document_link: str, terms_dict: dict) -> dict:
-        for word in self.get_words_from_text(document_text):  # TODO: check logic !!!
+        for word in self.get_words_from_text(document_text):
             try:
                 word = word.lower()
 
@@ -194,20 +192,16 @@ class IndexerV2:
         df = pd.read_excel('../crawled_data.xlsx', skiprows=0, usecols='C').values.tolist()
         return df, len(df)
 
-    def get_term_index_from_list(self, term: str):  # todo 1: specify return type  -  todo2: catch exception
-        # df = pd.read_excel('../index.xlsx', skiprows=0, usecols='A')  # todo : این نباید هر سری از فایل بخونه برای هر term!
+    def get_term_index_from_list(self, term: str):  # todo: specify return type
         termlist = np.array(self.index_file.iloc[:, 0])
         return np.where(termlist == term)[0][0]
 
     def get_term_count(self) -> int:
-        # df = pd.read_excel('../index.xlsx', skiprows=0, usecols='A')
-        return self.index_file.shape[0] - 2  # just add column 'A'  # todo how the fuck !? (needs minus 2)
+        return self.index_file.shape[0] - 2
 
     def get_indexed_documents_list_and_count(self) -> object:
         values = self.index_file.iloc[-1:-3:-1].values
         self.indexed_documents_list = ast.literal_eval(values[0][1])
         self.indexed_documents_count = values[1][1]
-        # termlist = np.array(self.index_file.values.tolist()).flatten()
-        # self.indexed_documents_list = np.where(termlist == 'indexed_documents_list')[0][0]
-        # self.indexed_documents_count = np.where(termlist == 'indexed_documents_count')[0][0]
+
         return self.indexed_documents_list, self.indexed_documents_count
