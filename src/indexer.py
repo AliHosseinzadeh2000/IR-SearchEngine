@@ -6,13 +6,24 @@ import pandas as pd
 from PyPDF2 import PageObject
 import numpy as np
 from normaziler import Normalizer
+import ast
 
 
 class Indexer:
 
     def __init__(self):
+        self.try_to_read_index_file()
+        self.indexed_documents_list = None
+        self.indexed_documents_count = None
         self.stop_words = self.get_stop_words_from_file('../resources/stop_words_english.txt')
         self.normalizer = Normalizer()
+
+    def try_to_read_index_file(self) -> None:
+        try:
+            self.index_file = pd.read_excel('../index.xlsx', skiprows=0)
+        except Exception:
+            self.index_file = None
+            pass
 
     @staticmethod
     def get_stop_words_from_file(filename: str) -> list[str]:
@@ -102,8 +113,7 @@ class Indexer:
         return True
 
     def get_term_index_from_list(self, term: str):  # todo 1: specify return type  -  todo2: catch exception
-        df = pd.read_excel('../index.xlsx', skiprows=0, usecols='A')
-        termlist = np.array(df.values.tolist()).flatten()
+        termlist = np.array(self.index_file.iloc[:, 0])
         return np.where(termlist == term)[0][0]
 
     def get_documents_list_and_count(self) -> tuple[list[str], int]:
@@ -111,8 +121,7 @@ class Indexer:
         return document_list, len(document_list)
 
     def get_term_count(self) -> int:
-        df = pd.read_excel('../index.xlsx', skiprows=0, usecols='A')
-        return df.shape[0]
+        return self.index_file.shape[0]
 
 
 if __name__ == '__main__':

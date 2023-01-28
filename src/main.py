@@ -6,14 +6,12 @@ def main():
     print("Initializing...")
     normalizer = Normalizer()
     calculation = Calculation()
-    calculation.make_tables()  # todo : move this to the 'calculation' module
 
     while True:
         query = input("Enter your query please:\t").strip().split()
         query = normalizer.normalize_word_list(query)
-        # query_vector = calculation.make_vector_from_query(query)  # todo : move this to the 'calculation' module
         ranked_documents = calculation.get_ranked_documents(query)
-        for entry in ranked_documents.items():
+        for entry in list(ranked_documents.items())[:10]:
             print(entry[0], ' : ', entry[1])
 
 

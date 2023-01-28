@@ -3,55 +3,97 @@ import math
 import time
 import pandas as pd
 from src.indexer import Indexer
+import numpy as np
 
 
 class Calculation:
 
     def __init__(self):
         self.indexer = Indexer()
+        self.tf_table = None
+        self.idf_table = None
+        self.tfidf_table = None
+        self.docs = None
+        self.total_doc_count = None
+        self.make_tables()
 
     def get_ranked_documents(self, query: list[str]):
-        data_frame = pd.read_excel('../tfidf.xlsx', skiprows=0)
+        start = time.time()
         query_vector = self.make_vector_from_query(query)
-        docs = self.indexer.get_documents_list_and_count()[0]
-        docs = sorted(docs, key=str.casefold)
         cosines = dict()
 
-        for index in range(self.indexer.get_documents_list_and_count()[1]):
-            cosines[docs[index]] = (self.get_cos_vector(self.get_doc_as_vector(index, data_frame), query_vector))
-
+        for index in range(len(self.docs)):
+            cosines[self.docs[index]] = (self.get_cos_vector(self.get_doc_as_vector(index, self.tfidf_table), query_vector))
+        print(time.time() - start)
         return dict(sorted(cosines.items(), key=lambda item: item[1], reverse=True))
 
     def make_tables(self) -> None:
         # making index table
         try:
-            data_frame = pd.read_excel('../index.xlsx')
-            if data_frame.empty:
+            if self.indexer.index_file.empty:
                 print("Indexing documents...")
                 self.indexer.main()
         except Exception:
             print("Indexing documents...")
             self.indexer.main()
 
-        print("Extracting tf table...")
-        self.extract_tf_table()
+        self.docs, self.total_doc_count = self.indexer.get_documents_list_and_count()
+        self.docs = sorted(self.docs, key=str.casefold)
 
-        print("Calculating idf...")
-        # total_doc_count = indexer.get_documents_list_and_count()[1]
-        self.extract_idf_table(self.indexer.get_documents_list_and_count()[1])  # 5 -> cause current indexed document count is 5
+        try:
+            if not self.tf_table.empty:
+                pass
+        except AttributeError:
+            try:
+                self.tf_table = pd.read_excel('../tf_table.xlsx', skiprows=0)
+                if self.tf_table.empty:
+                    print("Extracting tf table...")
+                    self.extract_tf_table()
+            except Exception:
+                print("Extracting tf table...")
+                self.extract_tf_table()
+        except Exception:
+            print("Extracting tf table...")
+            self.extract_tf_table()
 
-        print("Calculating tf-idf...")
-        self.extract_tfidf_table()
+        try:
+            if not self.idf_table.empty:
+                pass
+        except AttributeError:
+            try:
+                self.idf_table = pd.read_excel('../idf_table.xlsx', skiprows=0, usecols='B')
+                if self.idf_table.empty:
+                    print("Calculating idf...")
+                    self.extract_idf_table(self.total_doc_count)
+            except Exception:
+                print("Calculating idf...")
+                self.extract_idf_table(self.total_doc_count)
+        except Exception:
+            print("Calculating idf...")
+            self.extract_idf_table(self.total_doc_count)
+
+        try:
+            if not self.tfidf_table.empty:
+                pass
+        except AttributeError:
+            try:
+                self.tfidf_table = pd.read_excel('../tfidf.xlsx', skiprows=0)
+                if self.tfidf_table.empty:
+                    print("Calculating tf-idf...")
+                    self.extract_tfidf_table()
+            except Exception:
+                print("Calculating tf-idf...")
+                self.extract_tfidf_table()
+        except Exception:
+            print("Calculating tf-idf...")
+            self.extract_tfidf_table()
 
     def dot_product(self, vector1: list[int | float], vector2: list[int | float]) -> float:
         new_vector = []
         total_sum = 0
-
         if len(vector1) == len(vector2):
-            for index in range(len(vector1)):
-                new_vector.append(vector1[index] * vector2[index])
-            for index in range(len(new_vector)):
-                total_sum += new_vector[index]
+            new_vector.append([vec1 * vec2 for vec1, vec2 in zip(vector1, vector2)])
+            total_sum = np.sum(np.array(new_vector))
             return total_sum
         else:
             print("Vectors are not the same size")
@@ -81,8 +123,8 @@ class Calculation:
 
     def get_vector_size(self, vector: list[int | float]) -> float:
         total_sum = 0
-        for index in range(len(vector)):
-            total_sum += math.pow(vector[index], 2)
+        powered_list = [math.pow(vec, 2) for vec in vector]
+        total_sum = np.sum(np.array(powered_list))
         return math.sqrt(total_sum)
 
     def get_cos_vector(self, vector1: list[int | float], vector2: list[int | float]) -> float:
@@ -102,7 +144,7 @@ class Calculation:
 
     # TODO: Further optimization
     def extract_tf_table(self) -> None:
-        data_frame = pd.read_excel('../index.xlsx', skiprows=0, usecols='A, D')
+        data_frame = self.indexer.index_file.loc[:, ['Unnamed: 0', 2]]
 
         terms = []
         docs = set()
@@ -128,9 +170,10 @@ class Calculation:
 
         new_df = pd.DataFrame(datas, index=terms, columns=docs_list)
         new_df.to_excel('../tf_table.xlsx')
+        self.tf_table = pd.read_excel('../tf_table.xlsx', skiprows=0)
 
     def extract_idf_table(self, total_doc_count: int) -> None:
-        data_frame = pd.read_excel('../index.xlsx', skiprows=0, usecols='A, C')
+        data_frame = self.indexer.index_file.loc[:, ['Unnamed: 0', 1]]
         terms = []
         dfs = []
 
@@ -144,25 +187,23 @@ class Calculation:
 
         new_df = pd.DataFrame(self.calculate_normal_idf_for_all(dfs, total_doc_count), index=terms)
         new_df.to_excel('../idf_table.xlsx')
+        self.idf_table = pd.read_excel('../idf_table.xlsx', skiprows=0, usecols='B')
 
     def extract_tfidf_table(self):
-        data_frame_idf = pd.read_excel('../idf_table.xlsx', skiprows=0, usecols='B')
-        data_frame = pd.read_excel('../tf_table.xlsx', skiprows=0)
-
-        idfs = data_frame_idf.values.tolist()
+        idfs = self.idf_table.values.tolist()
         idfs = list(itertools.chain(*idfs))
-        cols = data_frame[data_frame.columns[1:]]
-        index = 0
+        cols = self.tf_table[self.tf_table.columns[1:]]
+
         tfidf = []
-        column = list(cols.iloc[:, 1])
-        for index in range(self.indexer.get_documents_list_and_count()[1]):
+        for index in range(self.total_doc_count):
             tfidf.append(self.calculate_normal_tfidf_for_col(list(cols.iloc[:, index]), idfs))
 
         new_data_frame = pd.DataFrame(tfidf)
         new_data_frame = new_data_frame.transpose()
         new_data_frame.to_excel('../tfidf.xlsx')
+        self.tfidf_table = pd.read_excel('../tfidf.xlsx', skiprows=0)
 
     def get_doc_as_vector(self, doc_num: int, data_frame: pd.DataFrame) -> list[float]:
         all_cols = data_frame[data_frame.columns[1:]]
-        mylist = [i[doc_num] for i in all_cols.values]
+        mylist = all_cols.iloc[:, doc_num]
         return mylist
