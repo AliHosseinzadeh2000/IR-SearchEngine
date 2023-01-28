@@ -1,6 +1,5 @@
 import itertools
 import math
-import time
 import pandas as pd
 from src.indexer import Indexer
 import numpy as np
@@ -18,13 +17,12 @@ class Calculation:
         self.make_tables()
 
     def get_ranked_documents(self, query: list[str]):
-        start = time.time()
         query_vector = self.make_vector_from_query(query)
         cosines = dict()
 
         for index in range(len(self.docs)):
             cosines[self.docs[index]] = (self.get_cos_vector(self.get_doc_as_vector(index, self.tfidf_table), query_vector))
-        print(time.time() - start)
+            
         return dict(sorted(cosines.items(), key=lambda item: item[1], reverse=True))
 
     def make_tables(self) -> None:
